@@ -200,6 +200,9 @@ def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
     y_test = to_categorical(y_test)
     _, features = x_train.shape
 
+    x_train, y_train = np.array(x_train), np.array(y_train)
+    x_test, y_test = np.array(x_test), np.array(y_test)
+
     aux_input = Input(shape=(features,) )
     aux = Dense(1024, activation='relu')(aux_input)
     aux = Dense(1024, activation='relu')(aux)
@@ -250,6 +253,9 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
     y_train = to_categorical(y_train)
     y_test = to_categorical(y_test)
     _, features = x_train.shape
+
+    x_train, y_train = np.array(x_train), np.array(y_train)
+    x_test, y_test = np.array(x_test), np.array(y_test)
 
     train_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
     test_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
