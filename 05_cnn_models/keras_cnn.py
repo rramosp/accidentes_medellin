@@ -13,9 +13,10 @@ from keras.layers.merge import concatenate
 from keras.optimizers import Adam
 from keras.applications import InceptionV3, VGG16, VGG19, Xception, ResNet50
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
+from keras.preprocessing.image import ImageDataGenerator
 
 from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as 
+import matplotlib.pyplot as plt
 import seaborn as sns
 
 # 1. Leer split de imagenes
@@ -73,20 +74,20 @@ def create_data_splits(accidents_dir, fetex_dir, metrics_dir, grid_id):
     test_split = pd.read_csv(f'../support_data/{grid_id}/test.csv', index_col='id')
     
     # Create all joined dataframes
-    acc_train = join_dataframes(train, accidents)
-    acc_test  = join_dataframes(test, accidents)
-    fx_train  = join_dataframes(train, fetex)
-    fx_test   = join_dataframes(test, fetex)
-    metrics_train = join_dataframes(train, metrics)
-    metrics_test  = join_dataframes(test, metrics)
-    acc_fx_train  = join_dataframes(train, accidents, fetex)
-    acc_fx_test   = join_dataframes(test, accidents, fetex)
-    fx_metrics_train  = join_dataframes(train, fetex, metrics)
-    fx_metrics_test   = join_dataframes(test, fetex, metrics)
-    acc_metrics_train = join_dataframes(train, accidents, metrics)
-    acc_metrics_test  = join_dataframes(test, accidents, metrics)
-    acc_fx_metrics_train = join_dataframes(train, accidents, fetex, metrics)
-    acc_fx_metrics_test  = join_dataframes(test, accidents, fetex, metrics)
+    acc_train = join_dataframes(train_split, accidents)
+    acc_test  = join_dataframes(test_split, accidents)
+    fx_train  = join_dataframes(train_split, fetex)
+    fx_test   = join_dataframes(test_split, fetex)
+    metrics_train = join_dataframes(train_split, metrics)
+    metrics_test  = join_dataframes(test_split, metrics)
+    acc_fx_train  = join_dataframes(train_split, accidents, fetex)
+    acc_fx_test   = join_dataframes(test_split, accidents, fetex)
+    fx_metrics_train  = join_dataframes(train_split, fetex, metrics)
+    fx_metrics_test   = join_dataframes(test_split, fetex, metrics)
+    acc_metrics_train = join_dataframes(train_split, accidents, metrics)
+    acc_metrics_test  = join_dataframes(test_split, accidents, metrics)
+    acc_fx_metrics_train = join_dataframes(train_split, accidents, fetex, metrics)
+    acc_fx_metrics_test  = join_dataframes(test_split, accidents, fetex, metrics)
 
     # Create joins
     single_join = {'accidents':(acc_train, acc_test), 'fetex':(fx_train, fx_test), 'metrics':(metrics_train, metrics_test)}
@@ -95,14 +96,6 @@ def create_data_splits(accidents_dir, fetex_dir, metrics_dir, grid_id):
     
     return [single_join, double_join, triple_join]
 
-def get_model_simple():
-    aux_input = Input(shape=(features,))
-    aux = Dense(1024, activation='relu')(aux_input)
-    aux = Dense(1024, activation='relu')(aux)
-    aux = Dense(1024, activation='relu')(aux)
-    aux = Dense(1024, activation='relu')(aux)
-
-    return aux  
 
 def get_model_only_images(model_name, img_width, img_height):
     if model_name == 'inceptionV3':
@@ -125,13 +118,13 @@ def get_model_only_images(model_name, img_width, img_height):
 def get_callback_list(top_weights_path):
     callback_list = [
         TensorBoard(log_dir=f'logs/{top_weights_path}', write_grads=True, write_images=True), 
-        EarlyStopping(monitor='val_acc', patience=20, verbose=1),
+        EarlyStopping(monitor='val_acc', patience=10, verbose=1),
         ModelCheckpoint(f'models/{top_weights_path}', verbose=1, save_best_only=True, monitor='val_acc'),
-        ReduceLROnPlateau(monitor='val_acc', patience=10, verbose=1, factor=0.1)
+        ReduceLROnPlateau(monitor='val_acc', patience=5, verbose=1, factor=0.1)
     ]
     return callback_list
 
-def train_only_images(name, num_classes, lr_rate, img_width, img_height, imgs_dir, grid_id):
+def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, imgs_dir, grid_id):
     np.random.seed(1)
 
     train_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
@@ -140,18 +133,18 @@ def train_only_images(name, num_classes, lr_rate, img_width, img_height, imgs_di
     train_generator = train_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/train/',
         target_size=(img_width, img_height),
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         class_mode='categorical')
     test_generator = test_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/test/',
         target_size=(img_width, img_height),
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         class_mode='categorical')
 
     main_input = Input(shape=(img_width, img_height, 3))
-    base_model, last_layer_number = get_model_only_images(name, num_classes, img_width, img_height)
+    base_model, last_layer_number = get_model_only_images(model_name, img_width, img_height)
 
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
@@ -173,10 +166,10 @@ def train_only_images(name, num_classes, lr_rate, img_width, img_height, imgs_di
 
     model.fit_generator(
         train_generator,
-        steps_per_epoch= train_generator.n // batch_size,
+        steps_per_epoch= train_generator.n // 32,
         epochs=100,
         validation_data=test_generator,
-        validation_steps= test_generator.n // batch_size,
+        validation_steps= test_generator.n // 32,
         callbacks=callback_list)
 
     #model.save(top_weights_path)
@@ -192,11 +185,11 @@ def train_only_images(name, num_classes, lr_rate, img_width, img_height, imgs_di
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     sns.heatmap(cm, annot=True, fmt='g')
 
-    plt.title(f'only_images_{name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
-    plt.savefig(f'figures/only_images_{name}_lr{lr_rate}.png')
+    plt.title(f'only_images_{model_name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
+    plt.savefig(f'figures/only_images_{model_name}_lr{lr_rate}.png')
 
 
-def train_simple_net(train, test, lr_rate, name, num_classes):
+def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
     np.random.seed(1)
         
     x_train, y_train = train.drop('label', axis=1), train.label
@@ -221,7 +214,7 @@ def train_simple_net(train, test, lr_rate, name, num_classes):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    top_weights_path = f'models/simple_{name}_lr{lrate}'
+    top_weights_path = f'models/simple_{dataset_name}_lr{lr_rate}'
     callback_list = get_callback_list(top_weights_path)
 
     model.fit(x_train, 
@@ -229,7 +222,7 @@ def train_simple_net(train, test, lr_rate, name, num_classes):
         validation_data=(x_test, y_test), 
         epochs=100, 
         shuffle=True,
-        batch_size=64,
+        batch_size=32,
         callbacks=callback_list, verbose=1)
 
     #model.save(top_weights_path)
@@ -242,8 +235,8 @@ def train_simple_net(train, test, lr_rate, name, num_classes):
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     sns.heatmap(cm, annot=True, fmt='g')
 
-    plt.title(f'simple_{name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
-    plt.savefig(f'figures/simple_{name}_lr{lr_rate}.png')
+    plt.title(f'simple_{dataset_name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
+    plt.savefig(f'figures/simple_{dataset_name}_lr{lr_rate}.png')
 
 
 def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height, imgs_dir, grid_id, train, test, dataset_name):
@@ -264,14 +257,14 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
     train_generator = train_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/train/',
         target_size=(img_width, img_height),
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         class_mode='categorical')
 
     test_generator = test_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/test/',
         target_size=(img_width, img_height),
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         class_mode='categorical')
 
@@ -289,7 +282,7 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
 
     # Load Image Network
     main_input = Input(shape=(img_width, img_height, 3))
-    base_model, last_layer_number = get_model_only_images(name, num_classes, img_width, img_height)
+    base_model, last_layer_number = get_model_only_images(model_name, img_width, img_height)
 
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
@@ -323,11 +316,12 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
 
     model.fit_generator(
         csv_train_generator,
-        steps_per_epoch=train_generator.n//batch_size,
+        steps_per_epoch=train_generator.n//32,
         epochs=100,
         validation_data=csv_test_generator,
-        validation_steps=test_generator.n//batch_size,
-        callback_list=callback_list)
+        validation_steps=test_generator.n//32,
+        callbacks=callback_list,
+        verbose=1)
 
     #model.save(top_weights_path)
     model.load_weights(top_weights_path)
@@ -352,16 +346,16 @@ if __name__ == '__main__':
     fetex_dir = cfg.get('dirs','fetex')
     accidents_dir = cfg.get('dirs', 'accidentes')
     metrics_dir = cfg.get('dirs', 'road_metrics')
-    imgs_dir = cfg.get('images', 'images')
+    imgs_dir = cfg.get('dirs', 'img_tiles')
     grid_id = cfg.get('grid', 'default')
     grid_id = re.sub("\D", "", grid_id)
     print(f'using {grid_id}')
 
     for data_list in create_data_splits(accidents_dir, fetex_dir, metrics_dir, grid_id):
         for key, (train, test) in data_list.items():
-            for lr_rate in [0.01, 0.0001]:
+            for lr_rate in [0.001, 0.0001]:
                 train_simple_net(train, test, lr_rate, key, 4)
                 
                 for model in ['inceptionV3', 'vgg16', 'vgg19', 'xception', 'resnet50']:
-                    train_only_images(model, 4, lr_rate, 420, 420, grid_id)
+                    train_only_images(model, 4, lr_rate, 420, 420, imgs_dir, grid_id)
                     train_combined_model(model, 4, lr_rate, 420, 420, imgs_dir, grid_id, train, test, key)
