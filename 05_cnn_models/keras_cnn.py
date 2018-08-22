@@ -172,22 +172,8 @@ def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, i
         validation_steps= test_generator.n // 32,
         callbacks=callback_list)
 
-    #model.save(top_weights_path)
-
-    # Get Confusion Matrix
-    model.load_weights(top_weights_path)
-
-    score, acc_val = model.evaluate_generator(test_generator, steps=test_generator.n/2)
-    y_pred = model.predict_generator(test_generator, workers=-1)
-    y_pred_classes = y_pred.argmax(axis=-1)
-
-    cm = confusion_matrix(test_generator.classes, y_pred_classes)
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    sns.heatmap(cm, annot=True, fmt='g')
-
-    plt.title(f'only_images_{model_name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
-    plt.savefig(f'figures/only_images_{model_name}_lr{lr_rate}.png')
-
+    model.save(top_weights_path)
+    
 
 def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
     np.random.seed(1)
@@ -228,18 +214,8 @@ def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
         batch_size=32,
         callbacks=callback_list, verbose=1)
 
-    #model.save(top_weights_path)
-    model.load_weights(top_weights_path)
-
-    y_pred = model.predict(x_test)
-    score, acc_val = model.evaluate(x_test, y_test)
-
-    cm = confusion_matrix(y_test, y_pred)
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    sns.heatmap(cm, annot=True, fmt='g')
-
-    plt.title(f'simple_{dataset_name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
-    plt.savefig(f'figures/simple_{dataset_name}_lr{lr_rate}.png')
+    model.save(top_weights_path)
+    #model.load_weights(top_weights_path)
 
 
 def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height, imgs_dir, grid_id, train, test, dataset_name):
@@ -329,21 +305,8 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
         callbacks=callback_list,
         verbose=1)
 
-    #model.save(top_weights_path)
-    model.load_weights(top_weights_path)
-
-    score, acc_val = model.evaluate_generator(test_generator, steps=test_generator.n/2)
-    y_pred = model.predict_generator(test_generator, workers=-1)
-    y_pred_classes = y_pred.argmax(axis=-1)
-
-    cm = confusion_matrix(test_generator.classes, y_pred_classes)
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    sns.heatmap(cm, annot=True, fmt='g')
-
-    plt.title(f'combined_{model_name}_{dataset_name}_lr{lr_rate} = {acc_val*100:.2f}', fontsize=14)
-    plt.savefig(f'figures/combined_{model_name}_{dataset_name}_lr{lr_rate}.png')
-
-
+    model.save(top_weights_path)
+    
 
 if __name__ == '__main__':
 
