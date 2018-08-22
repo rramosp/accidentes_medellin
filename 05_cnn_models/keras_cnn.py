@@ -321,8 +321,9 @@ if __name__ == '__main__':
     grid_id = re.sub("\D", "", grid_id)
     print(f'using {grid_id}')
 
-    for model in ['inceptionV3', 'vgg16', 'vgg19', 'xception', 'resnet50']:
-        train_only_images(model, 4, lr_rate, 420, 420, imgs_dir, grid_id)
+    for lr_rate in [0.01, 0.0001]:
+        for model in ['inceptionV3', 'vgg16', 'vgg19', 'xception', 'resnet50']:
+            train_only_images(model, 4, lr_rate, 256, 256, imgs_dir, grid_id)
                 
     for data_list in create_data_splits(accidents_dir, fetex_dir, metrics_dir, grid_id):
         for key, (train, test) in data_list.items():
@@ -330,4 +331,4 @@ if __name__ == '__main__':
                 train_simple_net(train, test, lr_rate, key, 4)
                 
                 for model in ['inceptionV3', 'vgg16', 'vgg19', 'xception', 'resnet50']:
-                    train_combined_model(model, 4, lr_rate, 420, 420, imgs_dir, grid_id, train, test, key)
+                    train_combined_model(model, 4, lr_rate, 256, 256, imgs_dir, grid_id, train, test, key)
