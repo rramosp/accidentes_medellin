@@ -112,7 +112,8 @@ def get_model_only_images(model_name, main_input, img_width, img_height):
         last_layer_number = len(base_model.layers)
     elif model_name == 'resnet50':
         base_model = ResNet50(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False, input_tensor=main_input)
-    
+        last_layer_number = len(base_model.layers)
+
     return base_model, last_layer_number
 
 def get_callback_list(top_weights_path):
@@ -133,13 +134,13 @@ def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, i
     train_generator = train_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/train/',
         target_size=(img_width, img_height),
-        batch_size=32,
+        batch_size=8,
         shuffle=True,
         class_mode='categorical')
     test_generator = test_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/test/',
         target_size=(img_width, img_height),
-        batch_size=32,
+        batch_size=8,
         shuffle=True,
         class_mode='categorical')
 
@@ -166,10 +167,10 @@ def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, i
 
     model.fit_generator(
         train_generator,
-        steps_per_epoch= train_generator.n // 32,
+        steps_per_epoch= train_generator.n // 8,
         epochs=100,
         validation_data=test_generator,
-        validation_steps= test_generator.n // 32,
+        validation_steps= test_generator.n // 8,
         callbacks=callback_list)
 
     model.save(f'models/{top_weights_path}')
@@ -211,7 +212,7 @@ def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
         validation_data=(x_test, y_test), 
         epochs=100, 
         shuffle=True,
-        batch_size=32,
+        batch_size=8,
         callbacks=callback_list, verbose=1)
 
     model.save(f'models/{top_weights_path}')
@@ -239,14 +240,14 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
     train_generator = train_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/train/',
         target_size=(img_width, img_height),
-        batch_size=32,
+        batch_size=8,
         shuffle=True,
         class_mode='categorical')
 
     test_generator = test_datagen.flow_from_directory(
         f'{imgs_dir}/{grid_id}/test/',
         target_size=(img_width, img_height),
-        batch_size=32,
+        batch_size=8,
         shuffle=True,
         class_mode='categorical')
 
@@ -264,7 +265,7 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
 
     # Load Image Network
     main_input = Input(shape=(img_width, img_height, 3))
-    base_model, last_layer_number = get_model_only_images(model_name, img_width, img_height)
+    base_model, last_layer_number = get_model_only_images(model_name, main_input, img_width, img_height)
 
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
@@ -298,10 +299,10 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
 
     model.fit_generator(
         csv_train_generator,
-        steps_per_epoch=train_generator.n//32,
+        steps_per_epoch=train_generator.n//8,
         epochs=100,
         validation_data=csv_test_generator,
-        validation_steps=test_generator.n//32,
+        validation_steps=test_generator.n//8,
         callbacks=callback_list,
         verbose=1)
 
