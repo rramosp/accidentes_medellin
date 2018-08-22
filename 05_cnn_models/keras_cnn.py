@@ -97,21 +97,21 @@ def create_data_splits(accidents_dir, fetex_dir, metrics_dir, grid_id):
     return [single_join, double_join, triple_join]
 
 
-def get_model_only_images(model_name, img_width, img_height):
+def get_model_only_images(model_name, main_input, img_width, img_height):
     if model_name == 'inceptionV3':
-        base_model = InceptionV3(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False)
+        base_model = InceptionV3(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False, input_tensor=main_input)
         last_layer_number = 249
     elif model_name == 'vgg16':
-        base_model = VGG16(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False)
+        base_model = VGG16(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False, input_tensor=main_input)
         last_layer_number = len(base_model.layers)
     elif model_name == 'vgg19':
-        base_model = VGG16(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False)
+        base_model = VGG16(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False, input_tensor=main_input)
         last_layer_number = len(base_model.layers)
     elif model_name == 'xception':
-        base_model = Xception(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False)
+        base_model = Xception(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False, input_tensor=main_input)
         last_layer_number = len(base_model.layers)
     elif model_name == 'resnet50':
-        base_model = ResNet50(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False)
+        base_model = ResNet50(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=False, input_tensor=main_input)
     
     return base_model, last_layer_number
 
@@ -144,7 +144,7 @@ def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, i
         class_mode='categorical')
 
     main_input = Input(shape=(img_width, img_height, 3))
-    base_model, last_layer_number = get_model_only_images(model_name, img_width, img_height)
+    base_model, last_layer_number = get_model_only_images(model_name, main_input, img_width, img_height)
 
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
@@ -320,11 +320,13 @@ if __name__ == '__main__':
     grid_id = re.sub("\D", "", grid_id)
     print(f'using {grid_id}')
 
+    for model in ['inceptionV3', 'vgg16', 'vgg19', 'xception', 'resnet50']:
+        train_only_images(model, 4, lr_rate, 420, 420, imgs_dir, grid_id)
+                
     for data_list in create_data_splits(accidents_dir, fetex_dir, metrics_dir, grid_id):
         for key, (train, test) in data_list.items():
-            for lr_rate in [0.001, 0.0001]:
+            for lr_rate in [0.01, 0.0001]:
                 train_simple_net(train, test, lr_rate, key, 4)
                 
                 for model in ['inceptionV3', 'vgg16', 'vgg19', 'xception', 'resnet50']:
-                    train_only_images(model, 4, lr_rate, 420, 420, imgs_dir, grid_id)
                     train_combined_model(model, 4, lr_rate, 420, 420, imgs_dir, grid_id, train, test, key)
