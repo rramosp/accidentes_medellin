@@ -152,7 +152,7 @@ def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, i
     predictions = Dense(num_classes, activation='softmax')(x)
 
     model = Model(inputs=main_input, outputs=predictions)
-    top_weights_path = f'models/only_images_{model_name}_lr{lr_rate}.h5'
+    top_weights_path = f'only_images_{model_name}_lr{lr_rate}.h5'
 
     for layer in base_model.layers:
         layer.trainable = False
@@ -172,7 +172,7 @@ def train_only_images(model_name, num_classes, lr_rate, img_width, img_height, i
         validation_steps= test_generator.n // 32,
         callbacks=callback_list)
 
-    model.save(top_weights_path)
+    model.save(f'models/{top_weights_path}')
     
 
 def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
@@ -203,7 +203,7 @@ def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    top_weights_path = f'models/simple_{dataset_name}_lr{lr_rate}'
+    top_weights_path = f'simple_{dataset_name}_lr{lr_rate}'
     callback_list = get_callback_list(top_weights_path)
 
     model.fit(x_train, 
@@ -214,7 +214,7 @@ def train_simple_net(train, test, lr_rate, dataset_name, num_classes):
         batch_size=32,
         callbacks=callback_list, verbose=1)
 
-    model.save(top_weights_path)
+    model.save(f'models/{top_weights_path}')
     #model.load_weights(top_weights_path)
 
 
@@ -288,7 +288,7 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
     predictions = Activation('softmax')(merge)
 
     model = Model(inputs=[main_input, aux_input], outputs=predictions)
-    top_weights_path = f'models/combined_{model_name}_{dataset_name}_lr{lr_rate}'
+    top_weights_path = f'combined_{model_name}_{dataset_name}_lr{lr_rate}'
     callback_list = get_callback_list(top_weights_path)
 
     adam = Adam(lr=lr_rate, epsilon=1e-7)
@@ -305,7 +305,7 @@ def train_combined_model(model_name, num_classes, lr_rate, img_width, img_height
         callbacks=callback_list,
         verbose=1)
 
-    model.save(top_weights_path)
+    model.save(f'models/{top_weights_path}')
     
 
 if __name__ == '__main__':
